@@ -27,8 +27,10 @@ open Symbol
 
 /// submodule for constant definitions used in this module
 module Constants =
-    let xxx = 111 // sample constant definition (with bad name) delete and replace
-                  // your constants. Delete this comment as well!
+    let houseVScale = 20.0
+    let houseHScale = 20.0
+
+    let houseAttr = {defaultPolygon with StrokeWidth="4px"}
 
 
 
@@ -59,12 +61,50 @@ let drawSymbolHook
         (symbol:Symbol) 
         (theme:ThemeType) 
         : ReactElement list option =
-    // replace the code below by your own code
+    
+    let xyPosToString (xyPos:XYPos) :string= 
+        string xyPos.X + "," + string xyPos.Y + " "
+
+
+    let makeHouse windowsH windowsV xyPos :ReactElement list= 
+        let houseFourCorners () :string = 
+            let indexCombinations = [(1,2);(1,1);(2,1);(2,2)]
+
+            let houseCorner ((xindex,yindex):int*int) = 
+               
+                xyPosToString (
+                    xyPos + {X= (-1.0 ** xindex) * windowsH/2.0 * Constants.houseHScale; 
+                             Y= (-1.0 ** yindex)  *   (windowsV+1.0)/2.0 * Constants.houseVScale})
+
+            //Create four corner coords and concatenate
+            indexCombinations
+            |> List.map houseCorner
+            |> List.reduce (+)
+
+        //let makeWindows() :ReactElement list =
+            
+        //printfn $"{houseFourCorners()}"
+        //printfn $"{Constants.houseAttr}"
+        []
+        //|> List.append [(makePolygon (houseFourCorners()) Constants.houseAttr)]
+        //60,15 30,15 0,30 30,15
+        |> List.append [(makePolygon ("0,0 10,0 10,10 0,10 ") Constants.houseAttr)]
+        //|> List.append makeWindows
+
+
     match symbol.Component.Type with
     | Constant1 (width,constValue, _) ->
+        let xyPos = symbol.Pos
+
         printfn $"CONSTANT: width={width} ConstVale={constValue}"
-    | _ -> printfn "Symbol Hook"
-    None
+        let house = makeHouse width (float constValue) xyPos
+        //printfn $"{house}"
+        //Some (makeHouse width, constValue xyPos)
+        Some house
+        //None
+        
+    | _ -> None//printfn "Symbol Hook"
+    //None
 
 /// Return Some newWire to replace updateWire by your own code defined here.
 /// Choose which wires you control by returning None to use the
