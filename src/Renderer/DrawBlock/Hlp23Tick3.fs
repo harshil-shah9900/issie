@@ -27,11 +27,15 @@ open Symbol
 
 /// submodule for constant definitions used in this module
 module Constants =
-    let houseVScale = 20.0
-    let houseHScale = 20.0
-
+    //Function as gridV & gridH
+    let houseVScale = 40.0
+    let houseHScale = 40.0
+    let indexCombinations = [(0,0);(1,0);(1,1);(0,1)]
     let houseAttr = {defaultPolygon with StrokeWidth="4px"}
-
+    let windowAttr = {defaultPolygon with StrokeWidth="2px"}
+    let windowOffset = 0.2 * houseHScale
+    let windowWidth = 0.4 * houseHScale
+    let windowHeight = 0.4 * houseVScale
 
 
 
@@ -66,44 +70,82 @@ let drawSymbolHook
         string xyPos.X + "," + string xyPos.Y + " "
 
 
-    let makeHouse windowsH windowsV xyPos :ReactElement list= 
-        let houseFourCorners () :string = 
-            let indexCombinations = [(1,2);(1,1);(2,1);(2,2)]
+    let makeHouse (windowsH:int) (windowsV:int) xyPos :ReactElement list= 
 
+        let houseFourPoints () :string = 
+
+            //Given index combinations of 1 and 0, generates the corresponding corner coord of the house
             let houseCorner ((xindex,yindex):int*int) = 
                
                 xyPosToString (
-                    xyPos + {X= (-1.0 ** xindex) * windowsH/2.0 * Constants.houseHScale; 
-                             Y= (-1.0 ** yindex)  *   (windowsV+1.0)/2.0 * Constants.houseVScale})
+                    {X= (float xindex) * ((float (windowsH - 1)) * Constants.houseHScale + Constants.windowWidth + 2.0*Constants.windowOffset); 
+                     Y= (float yindex) * ((float (windowsV    )) * Constants.houseVScale + Constants.windowWidth + 2.0*Constants.windowOffset )})
 
             //Create four corner coords and concatenate
-            indexCombinations
+            Constants.indexCombinations
             |> List.map houseCorner
             |> List.reduce (+)
 
-        //let makeWindows() :ReactElement list =
+        let FourPoints width height xyPos =
+            //window width shall be 2/5, and height 3/5
+                
+            let corner ((xindex,yindex):int*int) = 
+               
+                xyPosToString (
+                    xyPos + {X=  (float xindex )  *   width; 
+                                Y= (float yindex )  *  height})
             
-        //printfn $"{houseFourCorners()}"
+            Constants.indexCombinations
+            |> List.map corner
+            |> List.reduce (+)
+
+
+        let makeWindows() :ReactElement list =
+            //windows width and length are scale/5.0
+            let WindowsH = [0..windowsH-1]
+            let WindowsV = [0..windowsV-1]
+            
+            //Generates top left corner coordinate of window
+            let windowTopLeft (xindex, yindex) =
+                
+                    {X= Constants.windowOffset + Constants.houseHScale * float xindex;
+                    Y=  Constants.windowOffset + Constants.houseVScale * float yindex}
+                
+            let windowCoords = 
+                List.allPairs WindowsH WindowsV
+                |> List.map windowTopLeft
+                |> List.map (FourPoints Constants.windowWidth Constants.windowHeight)
+                |> List.map (fun x -> makePolygon x Constants.windowAttr)
+            
+            windowCoords
+            
+          
+        let makeDoor () = 
+            let doorCentreX = ((float (windowsH - 1)) * Constants.houseHScale + Constants.windowWidth + 2.0*Constants.windowOffset)/2.0
+            let topLeftCoord = {X=doorCentreX - Constants.windowWidth/4.0;
+                                Y= (float (windowsV    )) * Constants.houseVScale + Constants.windowWidth + 2.0*Constants.windowOffset - Constants.windowHeight}
+            [makePolygon (FourPoints (Constants.windowWidth/2.0) Constants.windowHeight topLeftCoord) Constants.windowAttr]
+                
+        //printfn $"{houseFourPoints()}"
         //printfn $"{Constants.houseAttr}"
-        []
-        //|> List.append [(makePolygon (houseFourCorners()) Constants.houseAttr)]
         //60,15 30,15 0,30 30,15
-        |> List.append [(makePolygon ("0,0 10,0 10,10 0,10 ") Constants.houseAttr)]
-        //|> List.append makeWindows
+        []
+        |> List.append [(makePolygon (houseFourPoints ()) Constants.houseAttr)]
+        |> List.append (makeWindows ())
+        |> List.append (makeDoor ())
 
 
     match symbol.Component.Type with
     | Constant1 (width,constValue, _) ->
         let xyPos = symbol.Pos
 
-        printfn $"CONSTANT: width={width} ConstVale={constValue}"
-        let house = makeHouse width (float constValue) xyPos
+        //printfn $"CONSTANT: width={width} ConstVale={constValue}"
+        let house = makeHouse width (int constValue) xyPos
         //printfn $"{house}"
-        //Some (makeHouse width, constValue xyPos)
         Some house
-        //None
         
-    | _ -> None//printfn "Symbol Hook"
+        
+    | _ -> None //printfn "Symbol Hook"
     //None
 
 /// Return Some newWire to replace updateWire by your own code defined here.
