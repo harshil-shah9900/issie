@@ -171,16 +171,22 @@ let updateWireHook
         wire.Segments
         |> List.map (fun (seg:Segment) -> seg.Length,seg.Mode)
     //printfn "%s" $"Wire: Initial Orientation={wire.InitialOrientation}\nSegments={segmentInfo}"
-    let a,b = wire.Segments[2].Length, wire.Segments[4].Length
-    let adj = -((a/(a+b)) - 0.25)*(a+b)
-    //let wire' = tick3Helpers.MoveSegment model wire.Segments[3] adj
 
-    let segments' = 
-        wire.Segments
-        |> List.updateAt 2 {wire.Segments[2] with Length = a+adj}
-        |> List.updateAt 4 {wire.Segments[2] with Length = a-adj}
+    //If 7 segments, aka if middle vertical wire segment exists, then custom lengths
+    match wire.Segments.Length with
+    | 7 -> 
+        let a,b = wire.Segments[2].Length, wire.Segments[4].Length
+        let adj = -(    (a/(a+b))    -  0.9    )   *  (a+b)
+        //let wire' = tick3Helpers.MoveSegment model wire.Segments[3] adj
+
+        let segments' = 
+            wire.Segments
+            |> List.updateAt 2 {wire.Segments[2] with Length = a+adj}
+            |> List.updateAt 4 {wire.Segments[2] with Length = a-adj}
         
-    Some { wire with Segments = segments'}
+        Some { wire with Segments = segments'}
+
+    | _-> None
 
 //---------------------------------------------------------------------//
 //-------included here because it will be used in project work---------//
